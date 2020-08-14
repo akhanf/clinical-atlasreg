@@ -6,6 +6,13 @@ def get_t1w_filename(wildcards):
     else:
         return config['subject_t1w']
 
+def get_electrodes_filename(wildcards): 
+    if wildcards.subject in config['subject_electrodes_custom']:
+        return config['subject_electrodes_custom'][wildcards.subject]
+    else:
+        return config['subject_electrodes']
+
+
 
 rule import_subj_t1:
     input: get_t1w_filename
@@ -38,15 +45,21 @@ rule affine_aladin:
         'reg_aladin -flo {input.flo} -ref {input.ref} -res {output.warped_subj} -aff {output.xfm_ras}'
 
 
-rule qc_rigid:
+rule qc_reg:
     input:
         ref = config['template_t1w'],
-        flo = bids(root='results',subject='{subject}',suffix='T1w.nii.gz',space='{template}',desc='rigid'),
+        flo = bids(root='results',subject='{subject}',suffix='T1w.nii.gz',space='{template}',desc='{desc}'),
     output:
-        png = bids(root='qc',subject='{subject}',suffix='regqc.png',from_='subject', to='{template}',desc='rigid'),
-        html = bids(root='qc',subject='{subject}',suffix='regqc.html',from_='subject', to='{template}', desc='rigid'),
+        png = report(bids(root='qc',subject='{subject}',suffix='regqc.png',from_='subject', to='{template}',desc='{desc}'),
+                caption='../reports/regqc.rst',
+                category='reg_{desc}',
+                subcategory='{subject}'),
+        html = report(bids(root='qc',subject='{subject}',suffix='regqc.html',from_='subject', to='{template}', desc='{desc}'),
+                caption='../reports/regqc.rst',
+                category='reg_{desc}',
+                subcategory='{subject}'),
     group: 'preproc'
-    notebook: '../notebooks/vis_regqc.py.ipynb'
+    script: '../scripts/vis_regqc.py'
 
 rule convert_xfm_ras2itk:
     input:
@@ -171,6 +184,15 @@ rule bet:
 #            subcategory=bids(**subj_wildcards,include_subject_dir=False,include_session_dir=False))
 #    notebook: '../notebooks/vis_overlay_mask.py.ipynb'
         
+
+rule xfm_electrodes:
+    input: 
+        tsv = get_electrodes_filename,
+        t1w = bids(root='results',subject='{subject}',desc='n4',suffix='T1w.nii.gz'),
+        xfm_ras = bids(root='results',subject='{subject}',suffix='xfm.txt',from_='subject',to='{template}',desc='{desc}',type_='ras'),
+    output:
+        tsv = bids(root='results',subject='{subject}',suffix='electrodes.tsv',desc='{desc}',space='{template}') #desc is affine/rigid
+    notebook: '../notebooks/proc_electrodes.py.ipynb'
 
 
 #TODO ants, using aladin as initial rigid transform 
