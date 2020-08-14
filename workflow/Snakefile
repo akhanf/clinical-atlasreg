@@ -18,9 +18,11 @@ include: 'rules/common.smk'
 
 rule all:
     input:
+        warped_flo = expand(bids(root='results',suffix='T1w.nii.gz',space='{template}',desc='SyN',subject='{subject}'),subject=subjects,template=config['templates']),
+        done = expand(bids(root='results',subject='{subject}',desc='n4',suffix='T1w_fast.done'),subject=subjects)
         # The first rule should define the default target files
         # Subsequent target rules can be specified below. They should start with all_*.
 
 
 
-include: "rules/other.smk"
+include: "rules/atlas_reg.smk"
