@@ -12,16 +12,31 @@ subject_t1w_custom:
 
 
 
-template_t1w: resources/tpl-{template}_res-01_T1w.nii.gz
-template_mask: resources/tpl-{template}_res-01_desc-brain_mask.nii.gz 
-templates: 
- - MNI152NLin6Asym
+template_t1w: resources/tpl-{template}/tpl-{template}_res-01_T1w.nii.gz
+template_mask: resources/tpl-{template}/tpl-{template}_res-01_desc-brain_mask.nii.gz 
+template_tissue_probseg: resources/tpl-{template}/tpl-{template}_res-01_label-{tissue}_probseg.nii.gz
 
-subject_electrodes: /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/for_bmi/imaging/deriv/seeg_coordinates/sub-{subject}/channel_files/sub-{subject}_ses-001_electrodes.tsv
+tissue_labels:
+ - GM
+ - WM
+ - CSF
+
+templates: 
+ - MNI152NLin2009cAsym
+# - MNI152NLin6Asym
+
+
+
+template_atlas_dseg_nii: resources/tpl-{template}/tpl-{template}_res-01_atlas-{atlas}_dseg.nii.gz
+template_atlas_dseg_tsv: resources/tpl-{template}/tpl-{template}_res-01_atlas-{atlas}_dseg.tsv
+
+atlases:
+ - Cerebra
+
+subject_electrodes: /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/clinical/deriv/seega_coordinates/sub-{subject}/sub-{subject}_space-native_desc-ieeg_SEEGA.fcsv
 
 #some naming errors in input files:
-subject_electrodes_custom:
-    'P025': /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/for_bmi/imaging/deriv/seeg_coordinates/sub-{subject}/channel_files/sub-025_ses-001_electrodes.tsv
+subject_electrodes_custom: []
 
 ants:
     dim: 3

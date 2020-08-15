@@ -18,10 +18,15 @@ include: 'rules/common.smk'
 
 rule all:
     input:
-        warped_flo = expand(bids(root='results',suffix='T1w.nii.gz',space='{template}',desc='SyN',subject='{subject}'),subject=subjects,template=config['templates']),
-#        done = expand(bids(root='results',subject='{subject}',desc='n4',suffix='T1w_fast.done'),subject=subjects),
-        png = expand(bids(root='qc',subject='{subject}',suffix='regqc.png',from_='subject', to='{template}',desc='{desc}'),subject=subjects, desc=['rigid','affine','SyN'],template=config['templates'])
-        # Subsequent target rules can be specified below. They should start with all_*.
+        tsv = expand(bids(root='results',subject='{subject}',suffix='electrodes.tsv',desc='{atlas}',from_='{template}'),
+                subject=subjects,atlas=config['atlases'],template=config['templates']),
+        reg_vis = expand(bids(root='qc',subject='{subject}',suffix='regqc.png',from_='subject', to='{template}',desc='{desc}'),
+                subject=subjects, desc=['rigid','affine','SyN'],template=config['templates']),
+        electrode_vis = expand(bids(root='qc',subject='{subject}',suffix='electrodevis.png',desc='{desc}',space='{template}'),
+                subject=subjects, desc=['rigid','affine'],template=config['templates']),
+        probseg_vis = expand(bids(root='qc',subject='{subject}',suffix='probseg.png',label='{tissue}', from_='{template}'),
+                subject=subjects, tissue=config['tissue_labels'],template=config['templates']),
+              
 
 
 
