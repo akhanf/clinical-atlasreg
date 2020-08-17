@@ -1,3 +1,16 @@
+#-- affine directly
+rule rigid_aladin:
+    input: 
+        flo = bids(root='results',subject='{subject}',suffix='T1w.nii.gz'),
+        ref = config['template_t1w'],
+    output: 
+        warped_subj = bids(root='results',subject='{subject}',suffix='T1w.nii.gz',space='{template}',desc='rigid'),
+        xfm_ras = bids(root='results',subject='{subject}',suffix='xfm.txt',from_='subject',to='{template}',desc='rigid',type_='ras'),
+    container: config['singularity']['neuroglia']
+    group: 'preproc'
+    shell:
+        'reg_aladin -rigOnly -flo {input.flo} -ref {input.ref} -res {output.warped_subj} -aff {output.xfm_ras}'
+
 
 #=======  below not used, too computationally heavy..
 

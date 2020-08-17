@@ -1,19 +1,33 @@
 singularity:
     neuroglia: /project/6050199/akhanf/singularity/bids-apps/khanlab_neuroglia-core_latest.sif
-    ants: /project/6050199/akhanf/singularity/ants-v2.3.1.sif
 # use this URI if not on khanlab compute canada:
 #    neuroglia: docker://khanlab/neuroglia-core:latest
 
-subject_t1w: /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/mri/bids_defaced/sub-{subject}/ses-001/anat/sub-{subject}_ses-001_run-01_T1w_defaced.nii.gz
+subject_t1w: /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/clinical/bids/sub-{subject}/ses-presurg/anat/sub-{subject}_ses-presurg_run-01_T1w.nii.gz
 
 #use this if a particular subject has a custom path
 subject_t1w_custom:
-    'P029': /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/mri/bids_defaced/sub-{subject}/ses-001/anat/sub-{subject}_ses-001_acq-FSPGR_run-01_T1w_defaced.nii.gz
+    P029: /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/clinical/bids/sub-{subject}/ses-presurg/anat/sub-{subject}_ses-presurg_acq-FSPGR_run-01_T1w.nii.gz
+    P028: /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/clinical/bids/sub-{subject}/ses-presurg/anat/sub-{subject}_ses-presurg_acq-FSPGR_run-01_T1w.nii.gz
+    P024: /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/clinical/bids/sub-{subject}/ses-presurg/anat/sub-{subject}_ses-presurg_run-02_T1w.nii.gz
+
+subject_electrodes: /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/clinical/deriv/seega_coordinates/sub-{subject}/sub-{subject}_space-native_desc-ieeg_SEEGA.fcsv
+
+#use this if a particular subject has custom path
+subject_electrodes_custom: []
 
 
+
+
+templates: 
+ - MNI152NLin2009cAsym
 
 template_t1w: resources/tpl-{template}/tpl-{template}_res-01_T1w.nii.gz
 template_mask: resources/tpl-{template}/tpl-{template}_res-01_desc-brain_mask.nii.gz 
+
+template_atlas_dseg_nii: resources/tpl-{template}/tpl-{template}_res-01_atlas-{atlas}_dseg.nii.gz
+template_atlas_dseg_tsv: resources/tpl-{template}/tpl-{template}_res-01_atlas-{atlas}_dseg.tsv
+
 template_tissue_probseg: resources/tpl-{template}/tpl-{template}_res-01_label-{tissue}_probseg.nii.gz
 
 tissue_labels:
@@ -21,26 +35,15 @@ tissue_labels:
  - WM
  - CSF
 
-templates: 
- - MNI152NLin2009cAsym
-# - MNI152NLin6Asym
-
-
-
-template_atlas_dseg_nii: resources/tpl-{template}/tpl-{template}_res-01_atlas-{atlas}_dseg.nii.gz
-template_atlas_dseg_tsv: resources/tpl-{template}/tpl-{template}_res-01_atlas-{atlas}_dseg.tsv
-
 atlases:
  - Cerebra
 
-subject_electrodes: /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/clinical/deriv/seega_coordinates/sub-{subject}/sub-{subject}_space-native_desc-ieeg_SEEGA.fcsv
 
-#some naming errors in input files:
-subject_electrodes_custom: []
 
+#parameters for ants transformation
 ants:
     dim: 3
-    random_seed: 42 #requires ants version at least 2.3.1 (includes --random-seed option)
+#    random_seed: 42 #requires ants version at least 2.3.1 (includes --random-seed option) - removed this for compatibility with older version of ANTS..  (e.g. that used in neuroglia-core)
     intensity_opts: '-u 1 -w [0.01,0.99] -z 1'
     linear:
         reg_iterations: '1000x500x250x0'

@@ -13,8 +13,7 @@ html_view.save_as_html(snakemake.output.html)
 
 
 
-fig = plt.figure(figsize=(30, 3), facecolor='k')
-display = plotting.plot_anat(snakemake.input.ref,figure=fig,dim=0,display_mode='y')
+display = plotting.plot_anat(snakemake.input.ref,display_mode='ortho')
 display.add_contours(snakemake.input.flo,colors='r')
 display.savefig(snakemake.output.png)
 display.close()
