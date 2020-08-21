@@ -13,8 +13,8 @@ html_view.save_as_html(snakemake.output.html)
 
 
 
-display = plotting.plot_anat(snakemake.input.ref,display_mode='ortho')
-display.add_contours(snakemake.input.flo,colors='r')
+display = plotting.plot_anat(snakemake.input.flo,display_mode='ortho')
+display.add_contours(snakemake.input.ref,colors='r')
 display.savefig(snakemake.output.png)
 display.close()
 

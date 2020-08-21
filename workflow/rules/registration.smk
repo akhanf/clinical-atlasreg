@@ -37,7 +37,7 @@ rule convert_xfm_ras2itk:
     shell:
         'c3d_affine_tool {input}  -oitk {output}'
 
-rule warp_mask_from_template:
+rule warp_brainmask_from_template_affine:
     input: 
         mask = config['template_mask'],
         ref = bids(root='results',subject='{subject}',suffix='T1w.nii.gz'),
@@ -49,12 +49,30 @@ rule warp_mask_from_template:
     shell: 'antsApplyTransforms -d 3 --interpolation NearestNeighbor -i {input.mask} -o {output.mask} -r {input.ref} '
             ' -t [{input.xfm},1] ' #use inverse xfm (going from template to subject)
 
+rule warp_tissue_probseg_from_template_affine:
+    input: 
+        probseg = config['template_tissue_probseg'],
+        ref = bids(root='results',subject='{subject}',suffix='T1w.nii.gz'),
+        xfm = bids(root='results',subject='{subject}',suffix='xfm.txt',from_='subject',to='{template}',desc='{desc}',type_='itk'),
+    output:
+        probseg = bids(root='results',subject='{subject}',suffix='probseg.nii.gz',label='{tissue}',from_='{template}',reg='{desc}'),
+    container: config['singularity']['neuroglia']
+    group: 'preproc'
+    threads: 1
+    resources:
+        mem_mb = 16000
+    shell: 
+        'ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} '
+        'antsApplyTransforms -d 3 --interpolation Linear -i {input.probseg} -o {output.probseg} -r {input.ref} '
+            ' -t [{input.xfm},1]' #use inverse xfm (going from template to subject)
+
+
 rule n4biasfield:
     input: 
         t1 = bids(root='results',subject='{subject}',suffix='T1w.nii.gz'),
-        mask = bids(root='results',subject='{subject}',suffix='mask.nii.gz',from_='{template}',reg='affine',desc='brain'),
+        mask = bids(root='results',subject='{subject}',suffix='mask.nii.gz',from_='{template}'.format(template=config['template']),reg='affine',desc='brain'),
     output:
-        t1 = bids(root='results',subject='{subject}',desc='n4',from_='{template}', suffix='T1w.nii.gz'),
+        t1 = bids(root='results',subject='{subject}',desc='n4', suffix='T1w.nii.gz'),
     threads: 8
     container: config['singularity']['neuroglia']
     group: 'preproc'
@@ -63,20 +81,40 @@ rule n4biasfield:
         'N4BiasFieldCorrection -d 3 -i {input.t1} -x {input.mask} -o {output}'
 
 
+rule mask_template_t1w:
+    input:
+        t1 = config['template_t1w'],
+        mask = config['template_mask'],
+    output:
+        t1 = bids(root='results',prefix='tpl-{template}/tpl-{template}',desc='masked',suffix='T1w.nii.gz')
+    container: config['singularity']['neuroglia']
+    group: 'preproc'
+    shell:
+        'fslmaths {input.t1} -mas {input.mask} {output}'
+
+
+rule mask_subject_t1w:
+    input:
+        t1 = bids(root='results',subject='{subject}',desc='n4', suffix='T1w.nii.gz'),
+        mask = bids(root='results',subject='{subject}',suffix='mask.nii.gz',from_='atropos3seg',desc='brain')
+    output:
+        t1 = bids(root='results',subject='{subject}',suffix='T1w.nii.gz',from_='{atropos3seg}',desc='masked'),
+    container: config['singularity']['neuroglia']
+    group: 'preproc'
+    shell:
+        'fslmaths {input.t1} -mas {input.mask} {output}'
+
 
 rule ants_syn_affine_init:
     input: 
-        flo = bids(root='results',subject='{subject}',desc='n4',from_='{template}', suffix='T1w.nii.gz'),
-        ref = config['template_t1w'],
-        flo_mask = bids(root='results',subject='{subject}',suffix='mask.nii.gz',from_='{template}',reg='affine',desc='brain'),
-        ref_mask = config['template_mask'],
+        flo = bids(root='results',subject='{subject}',suffix='T1w.nii.gz',from_='atropos3seg',desc='masked'),
+        ref = bids(root='results',prefix='tpl-{template}/tpl-{template}',desc='masked',suffix='T1w.nii.gz'),
         init_xfm = bids(root='results',subject='{subject}',suffix='xfm.txt',from_='subject',to='{template}',desc='affine',type_='itk'),
     params:
         out_prefix = bids(root='results',suffix='',from_='subject',to='{template}',subject='{subject}'),
         base_opts = '--write-composite-transform -d {dim} --float 1 '.format(dim=config['ants']['dim']),
         intensity_opts = config['ants']['intensity_opts'],
         init_transform = lambda wildcards, input: '-r {xfm}'.format(xfm=input.init_xfm),
-        masks = lambda wildcards, input: '--masks [{ref_mask},{flo_mask}]'.format(ref_mask=input.ref_mask,flo_mask=input.flo_mask),
         linear_multires = '-c [{reg_iterations},1e-6,10] -f {shrink_factors} -s {smoothing_factors}'.format(
                                 reg_iterations = config['ants']['linear']['reg_iterations'],
                                 shrink_factors = config['ants']['linear']['shrink_factors'],
@@ -94,7 +132,7 @@ rule ants_syn_affine_init:
         out_composite = bids(root='results',suffix='Composite.h5',from_='subject',to='{template}',subject='{subject}'),
         out_inv_composite = bids(root='results',suffix='InverseComposite.h5',from_='subject',to='{template}',subject='{subject}'),
         warped_flo = bids(root='results',suffix='T1w.nii.gz',space='{template}',desc='SyN',subject='{subject}'),
-    threads: 16
+    threads: 8
     resources:
         mem_mb = 16000, # right now these are on the high-end -- could implement benchmark rules to do this at some point..
         time = 60 # 1 hrs
@@ -103,9 +141,9 @@ rule ants_syn_affine_init:
     shell: 
         'ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} '
         'antsRegistration {params.base_opts} {params.intensity_opts} '
-        '{params.init_transform} ' #initial xfm
-        '-t Rigid[0.1] {params.linear_metric} {params.linear_multires} ' # rigid registration
-        '-t Affine[0.1] {params.linear_metric} {params.linear_multires} ' # affine registration
+        '{params.init_transform} ' #initial xfm  -- rely on this for affine
+    #    '-t Rigid[0.1] {params.linear_metric} {params.linear_multires} ' # rigid registration
+    #    '-t Affine[0.1] {params.linear_metric} {params.linear_multires} ' # affine registration
         '{params.deform_model} {params.deform_metric} {params.deform_multires} '  # deformable registration
         '-o [{params.out_prefix},{output.warped_flo}]'
        
@@ -118,7 +156,7 @@ rule warp_dseg_from_template:
         ref = bids(root='results',subject='{subject}',suffix='T1w.nii.gz'),
         inv_composite = bids(root='results',suffix='InverseComposite.h5',from_='subject',to='{template}',subject='{subject}'),
     output:
-        dseg = bids(root='results',subject='{subject}',suffix='dseg.nii.gz',atlas='{atlas}',from_='{template}'),
+        dseg = bids(root='results',subject='{subject}',suffix='dseg.nii.gz',atlas='{atlas}',from_='{template}',reg='SyN'),
     container: config['singularity']['neuroglia']
     group: 'preproc'
     threads: 1
@@ -136,7 +174,7 @@ rule warp_tissue_probseg_from_template:
         ref = bids(root='results',subject='{subject}',suffix='T1w.nii.gz'),
         inv_composite = bids(root='results',suffix='InverseComposite.h5',from_='subject',to='{template}',subject='{subject}'),
     output:
-        probseg = bids(root='results',subject='{subject}',suffix='probseg.nii.gz',label='{tissue}',from_='{template}'),
+        probseg = bids(root='results',subject='{subject}',suffix='probseg.nii.gz',label='{tissue}',from_='{template}',reg='SyN'),
     container: config['singularity']['neuroglia']
     group: 'preproc'
     threads: 1
@@ -146,4 +184,47 @@ rule warp_tissue_probseg_from_template:
         'ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} '
         'antsApplyTransforms -d 3 --interpolation Linear -i {input.probseg} -o {output.probseg} -r {input.ref} '
             ' -t {input.inv_composite} ' #use inverse xfm (going from template to subject)
+
+rule warp_brainmask_from_template:
+    input: 
+        mask = config['template_mask'],
+        ref = bids(root='results',subject='{subject}',suffix='T1w.nii.gz'),
+        inv_composite = bids(root='results',suffix='InverseComposite.h5',from_='subject',to='{template}',subject='{subject}'),
+    output:
+        mask = bids(root='results',subject='{subject}',suffix='mask.nii.gz',from_='{template}',reg='SyN',desc='brain'),
+    container: config['singularity']['neuroglia']
+    group: 'preproc'
+    threads: 1
+    resources:
+        mem_mb = 16000
+    shell: 
+        'ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS={threads} '
+        'antsApplyTransforms -d 3 --interpolation NearestNeighbor -i {input.mask} -o {output.mask} -r {input.ref} '
+            ' -t {input.inv_composite} ' #use inverse xfm (going from template to subject)
+
+rule dilate_brainmask:
+    input:
+        mask = bids(root='results',subject='{subject}',suffix='mask.nii.gz',from_='{template}',reg='{desc}',desc='brain'),
+    params:
+        dil_opt =  ' '.join([ '-dilD' for i in range(config['n_init_mask_dilate'])])
+    output:
+        mask = bids(root='results',subject='{subject}',suffix='mask.nii.gz',from_='{template}',reg='{desc}',desc='braindilated'),
+    container: config['singularity']['neuroglia']
+    group: 'preproc'
+    shell:
+        'fslmaths {input} {params.dil_opt} {output}'
+
+
+#dilate labels N times to provide more of a fudge factor when assigning GM labels
+rule dilate_atlas_labels:
+    input:
+        dseg = bids(root='results',subject='{subject}',suffix='dseg.nii.gz',atlas='{atlas}',from_='{template}'),
+    params:
+        dil_opt =  ' '.join([ '-dilD' for i in range(config['n_atlas_dilate'])])
+    output:
+        dseg = bids(root='results',subject='{subject}',suffix='dseg.nii.gz',atlas='{atlas}',from_='{template}',desc='dilated'),
+    container: config['singularity']['neuroglia']
+    group: 'preproc'
+    shell:
+        'fslmaths {input} {params.dil_opt} {output}'
 

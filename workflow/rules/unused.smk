@@ -52,4 +52,49 @@ rule warp_probseg_from_template:
             ' -t {input.inv_composite}; done && ' #use inverse xfm (going from template to subject)
         'FSLOUTPUTTYPE=NIFTI_GZ fslmerge -t {output.probseg} out_seg*.nii'
 
+#--- atropos unused:
+
+rule tissue_segk4:
+    input: 
+        t1 = bids(root='results',subject='{subject}',desc='n4',from_='{template}', suffix='T1w.nii.gz'),
+        mask = bids(root='results',subject='{subject}',suffix='mask.nii.gz',from_='{template}',reg='SyN',desc='brain'),
+    params:
+        prior_fmt = 'results/sub-{subject}/prior_%d.nii.gz',
+        prior_f = '0.{prior_f}',
+        mrf_f = '0.{mrf_f}'    
+    output:
+        seg = bids(root='results',subject='{subject}',from_='{template}',suffix='dseg.nii.gz',prior='{prior_f}',mrf='{mrf_f}',desc='atroposk4')
+    log: bids(root='logs',subject='{subject}',from_='{template}',suffix='log.txt',prior='{prior_f}',mrf='{mrf_f}',desc='atropos') 
+    container: config['singularity']['neuroglia']
+    shell:
+        'Atropos -d 3 -a {input.t1} -i PriorProbabilityImages[4,{params.prior_fmt},{params.prior_f}] -x {input.mask} -o [{output.seg}] &> {log}'
+
+rule tissue_seg:
+    input: 
+        t1 = bids(root='results',subject='{subject}',desc='n4',from_='{template}', suffix='T1w.nii.gz'),
+        mask = bids(root='results',subject='{subject}',suffix='mask.nii.gz',from_='{template}',reg='SyN',desc='brain'),
+    params:
+        prior_fmt = 'results/sub-{subject}/prior_%d.nii.gz',
+        prior_f = '0.{prior_f}',
+        mrf_f = '0.{mrf_f}'    
+    output:
+        seg = bids(root='results',subject='{subject}',from_='{template}',suffix='dseg.nii.gz',prior='{prior_f}',mrf='{mrf_f}',desc='atropos')
+    log: bids(root='logs',subject='{subject}',from_='{template}',suffix='log.txt',prior='{prior_f}',mrf='{mrf_f}',desc='atropos') 
+    container: config['singularity']['neuroglia']
+    shell:
+        'Atropos -v -d 3 -a {input.t1} -i PriorProbabilityImages[3,{params.prior_fmt},{params.prior_f}] -x {input.mask} -o [{output.seg}] &> {log}'
+
+rule tissue_seg_priorinit:
+    input: 
+        t1 = bids(root='results',subject='{subject}',desc='n4',from_='{template}', suffix='T1w.nii.gz'),
+        mask = bids(root='results',subject='{subject}',suffix='mask.nii.gz',from_='{template}',reg='SyN',desc='brain'),
+    params:
+        init = 'PriorProbabilityImages[{k},results/sub-{subject}/prior_%d.nii.gz,0]',
+    output:
+        seg = bids(root='results',subject='{subject}',from_='{template}',suffix='dseg.nii.gz',method='PriorProbabilityImages',k='{k}',desc='atropos')
+    container: config['singularity']['neuroglia']
+    shell:
+        'Atropos -v -d 3 -a {input.t1} -i {params.init} -x {input.mask} -o [{output.seg}]'
+
+
 

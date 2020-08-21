@@ -18,18 +18,23 @@ include: 'rules/common.smk'
 
 rule all:
     input:
-        tsv = expand(bids(root='results',subject='{subject}',suffix='electrodes.tsv',desc='{atlas}',from_='{template}'),
-                subject=subjects,atlas=config['atlases'],template=config['templates']),
+#        tsv = expand(bids(root='results',subject='{subject}',suffix='electrodes.tsv',atlas='{atlas}',desc='blur{blur}',from_='{template}'),
+#                subject=subjects,atlas=config['atlases'],template=config['templates'],blur=config['atlas_blur']),
         reg_vis = expand(bids(root='qc',subject='{subject}',suffix='regqc.png',from_='subject', to='{template}',desc='{desc}'),
-                subject=subjects, desc=['affine','SyN'],template=config['templates']),
+                subject=subjects, desc=['affine','SyN'],template=config['template']),
         electrode_vis = expand(bids(root='qc',subject='{subject}',suffix='electrodevis.png',desc='{desc}',space='{template}'),
-                subject=subjects, desc=['affine'],template=config['templates']),
-        probseg_vis = expand(bids(root='qc',subject='{subject}',suffix='probseg.png',label='{tissue}', from_='{template}'),
-                subject=subjects, tissue=config['tissue_labels'],template=config['templates']),
+                subject=subjects, desc=['affine'],template=config['template']),
+        probseg_vis = expand(bids(root='qc',subject='{subject}',suffix='probseg.png', desc='atropos3seg'),
+                subject=subjects ),
         atlas_vis = expand(bids(root='qc',subject='{subject}',suffix='dseg.png',atlas='{atlas}', from_='{template}'),
-                subject=subjects, atlas=config['atlases'],template=config['templates']),
-             
-
+                subject=subjects, atlas=config['atlases'],template=config['template']),
+        tsv = expand(bids(root='results',subject='{subject}',suffix='electrodes.tsv',atlas='{atlas}',desc='dilated',from_='{template}'),
+                subject=subjects, atlas=config['atlases'],template=config['template'])
+#        seg = expand(bids(root='results',subject='{subject}',from_='{template}',suffix='dseg.nii.gz',prior='{prior_f}',mrf='000{mrf_f}',desc='atroposk4'),
+#                subject=subjects,template=config['templates'],prior_f=[0,25,5],mrf_f=1)
+                
+        
 include: "rules/registration.smk"
+include: "rules/segmentation.smk"
 include: "rules/electrodes.smk"
 include: "rules/visqc.smk"

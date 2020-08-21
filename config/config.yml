@@ -3,6 +3,8 @@ singularity:
 # use this URI if not on khanlab compute canada:
 #    neuroglia: docker://khanlab/neuroglia-core:latest
 
+
+
 subject_t1w: /project/6050199/akhanf/cfmm-bids/data/Khan/epi_iEEG/clinical/bids/sub-{subject}/ses-presurg/anat/sub-{subject}_ses-presurg_run-01_T1w.nii.gz
 
 #use this if a particular subject has a custom path
@@ -19,16 +21,15 @@ subject_electrodes_custom: []
 
 
 
-templates: 
- - MNI152NLin2009cAsym
+template: MNI152NLin2009cSym
 
-template_t1w: resources/tpl-{template}/tpl-{template}_res-01_T1w.nii.gz
-template_mask: resources/tpl-{template}/tpl-{template}_res-01_desc-brain_mask.nii.gz 
+template_t1w: resources/tpl-{template}/tpl-{template}_res-1_T1w.nii.gz
+template_mask: resources/tpl-{template}/tpl-{template}_res-1_desc-brain_mask.nii.gz 
 
-template_atlas_dseg_nii: resources/tpl-{template}/tpl-{template}_res-01_atlas-{atlas}_dseg.nii.gz
-template_atlas_dseg_tsv: resources/tpl-{template}/tpl-{template}_res-01_atlas-{atlas}_dseg.tsv
+template_atlas_dseg_nii: resources/tpl-{template}/tpl-{template}_res-1_atlas-{atlas}_dseg.nii.gz
+template_atlas_dseg_tsv: resources/tpl-{template}/tpl-{template}_atlas-{atlas}_dseg.tsv
 
-template_tissue_probseg: resources/tpl-{template}/tpl-{template}_res-01_label-{tissue}_probseg.nii.gz
+template_tissue_probseg: resources/tpl-{template}/tpl-{template}_res-1_label-{tissue}_probseg.nii.gz
 
 tissue_labels:
  - GM
@@ -36,7 +37,18 @@ tissue_labels:
  - CSF
 
 atlases:
- - Cerebra
+ - CerebrA
+
+
+#number of times to dilate  (each time 3x3x3 mode dilation)
+n_atlas_dilate: 3
+n_init_mask_dilate: 1 
+
+default_k_tissue_classes: 5 #higher than 3 to capture contrast-enhanced regions too
+
+#use this to specify custom values for subjects, e.g. here sub-P001 will have k=4 tissue classes for Atropos initialization
+subject_k_tissue_classes:
+    P001: 4
 
 
 
@@ -50,9 +62,9 @@ ants:
         shrink_factors: '6x4x2x1'
         smoothing_factors: '4x2x1x0'
     deform:
-        shrink_factors: '12x6x4x2x1'  # default in antsMVTC2: 6x4x2x1 
-        smoothing_factors: '6x3x2x1x0vox' # default in antsMVTC2: 3x2x1x0 
-        reg_iterations: '100x100x70x50x10' # default in antsMVTC2: 100x100x70x20 
+        shrink_factors: '12x6x4x2x1'  # default in antsMVTC2: 6x4x2x1
+        smoothing_factors: '6x3x2x1x0vox' # default in antsMVTC2: 3x2x1x0
+        reg_iterations: '100x100x70x50x10' # default in antsMVTC2: 100x100x70x20
         transform_model: 'SyN[0.1,3,0]'
         sim_metric: CC
     shape_update:
