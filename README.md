@@ -1,5 +1,6 @@
-# Snakemake workflow: `snakemake_neuroworkflow` 
-Template snakemake workflow for neuroimaging 
+# clinical-atlasreg
+
+--- DOCS UNDER CONSTRUCTION ---
 
 Inputs:
 - participants.tsv with target subject IDs
