@@ -18,8 +18,6 @@ include: 'rules/common.smk'
 
 rule all:
     input:
-#        tsv = expand(bids(root='results',subject='{subject}',suffix='electrodes.tsv',atlas='{atlas}',desc='blur{blur}',from_='{template}'),
-#                subject=subjects,atlas=config['atlases'],template=config['templates'],blur=config['atlas_blur']),
         reg_vis = expand(bids(root='qc',subject='{subject}',suffix='regqc.png',from_='subject', to='{template}',desc='{desc}'),
                 subject=subjects, desc=['affine','SyN'],template=config['template']),
         electrode_vis = expand(bids(root='qc',subject='{subject}',suffix='electrodevis.png',desc='{desc}',space='{template}'),
@@ -29,11 +27,32 @@ rule all:
         atlas_vis = expand(bids(root='qc',subject='{subject}',suffix='dseg.png',atlas='{atlas}', from_='{template}'),
                 subject=subjects, atlas=config['atlases'],template=config['template']),
         tsv = expand(bids(root='results',subject='{subject}',suffix='electrodes.tsv',atlas='{atlas}',desc='dilated',from_='{template}'),
-                subject=subjects, atlas=config['atlases'],template=config['template'])
-#        seg = expand(bids(root='results',subject='{subject}',from_='{template}',suffix='dseg.nii.gz',prior='{prior_f}',mrf='000{mrf_f}',desc='atroposk4'),
-#                subject=subjects,template=config['templates'],prior_f=[0,25,5],mrf_f=1)
+                subject=subjects, atlas=config['atlases'],template=config['template']),
+        results = ['results.tar', 'results_tsv_only.tar']
                 
-        
+       
+rule tar_results:
+    input:
+        tsv = expand(bids(root='results',subject='{subject}',suffix='electrodes.tsv',atlas='{atlas}',desc='dilated',from_='{template}'),
+                subject=subjects, atlas=config['atlases'],template=config['template']),
+        dseg_nii = expand(bids(root='results',subject='{subject}',suffix='dseg.nii.gz',desc='dilated',atlas='{atlas}',from_='{template}',reg='SyN'),
+                subject=subjects, atlas=config['atlases'],template=config['template']),
+        tissue_seg = expand(bids(root='results',subject='{subject}',suffix='probseg.nii.gz',label='{tissue}',desc='atropos3seg'),
+                            tissue=config['tissue_labels'],subject=subjects),
+        t1w = expand(bids(root='results',subject='{subject}',suffix='T1w.nii.gz',from_='atropos3seg',desc='masked'),
+                    subject=subjects)
+
+    output: 'results.tar'
+    shell: 'tar -cvf {output} {input}'
+
+rule tar_tsv_only:
+    input:
+        tsv = expand(bids(root='results',subject='{subject}',suffix='electrodes.tsv',atlas='{atlas}',desc='dilated',from_='{template}'),
+                subject=subjects, atlas=config['atlases'],template=config['template']),
+    output: 'results_tsv_only.tar'
+    shell: 'tar -cvf {output} {input}'
+
+
 include: "rules/registration.smk"
 include: "rules/segmentation.smk"
 include: "rules/electrodes.smk"
